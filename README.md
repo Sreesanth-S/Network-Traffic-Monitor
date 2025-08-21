@@ -3,7 +3,6 @@
 A comprehensive real-time network traffic analysis and threat detection system with an intuitive web dashboard. Monitor network packets, detect suspicious activities, and visualize threats in real-time.
 
 ![Network Security Monitor](https://img.shields.io/badge/Python-3.7%2B-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
 ![Status](https://img.shields.io/badge/Status-Active-brightgreen)
 
 ## 🌟 Features
