@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Network Security Monitor</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e293b;
+            --danger-color: #dc2626;
+            --warning-color: #f59e0b;
+            --success-color: #16a34a;
+            --info-color: #0891b2;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 1rem 0;
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .navbar-brand i {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-right: 0.5rem;
+        }
+        
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--card-bg) 0%, #f1f5f9 100%);
+            color: var(--text-primary);
+            padding: 2.5rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+        
+        .dashboard-header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--info-color));
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--accent-color, var(--primary-color));
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+        
+        .stat-card.danger::before { --accent-color: var(--danger-color); }
+        .stat-card.info::before { --accent-color: var(--info-color); }
+        .stat-card.success::before { --accent-color: var(--success-color); }
+        .stat-card.secondary::before { --accent-color: var(--text-secondary); }
+        
+        .stat-card .icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .stat-card.danger .icon { background: rgba(220, 38, 38, 0.1); color: var(--danger-color); }
+        .stat-card.info .icon { background: rgba(8, 145, 178, 0.1); color: var(--info-color); }
+        .stat-card.success .icon { background: rgba(22, 163, 74, 0.1); color: var(--success-color); }
+        .stat-card.secondary .icon { background: rgba(100, 116, 139, 0.1); color: var(--text-secondary); }
+        
+        .stat-card h3 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-card p {
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin: 0;
+        }
+        
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+        
+        .card-header {
+            background: var(--secondary-color);
+            color: white;
+            padding: 1.5rem;
+            border: none;
+            font-weight: 600;
+        }
+        
+        .filter-section {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--border-color);
+        }
+        
+        .filter-section h5 {
+            color: var(--text-primary);
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .filter-section h5 i {
+            margin-right: 0.5rem;
+            color: var(--primary-color);
+        }
+        
+        .form-control, .form-select {
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+            background: var(--card-bg);
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .table {
+            margin: 0;
+        }
+        
+        .table th {
+            background: var(--secondary-color);
+            color: white;
+            font-weight: 600;
+            border: none;
+            padding: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .table td {
+            padding: 1rem;
+            border-color: var(--border-color);
+            vertical-align: middle;
+        }
+        
+        .table tbody tr:hover {
+            background-color: #f8fafc;
+        }
+        
+        .alert-row {
+            background: rgba(220, 38, 38, 0.05) !important;
+            border-left: 4px solid var(--danger-color);
+        }
+        
+        .warning-row {
+            background: rgba(245, 158, 11, 0.05) !important;
+            border-left: 4px solid var(--warning-color);
+        }
+        
+        .protocol-badge {
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .tcp-badge {
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--primary-color);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+        
+        .udp-badge {
+            background: rgba(22, 163, 74, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(22, 163, 74, 0.2);
+        }
+        
+        .other-badge {
+            background: rgba(100, 116, 139, 0.1);
+            color: var(--text-secondary);
+            border: 1px solid rgba(100, 116, 139, 0.2);
+        }
+        
+        .badge {
+            font-weight: 600;
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+        }
+        
+        .map-container {
+            height: 400px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #f8fafc;
+        }
+        
+        .real-time-indicator {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--danger-color);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 1; }
+            70% { transform: scale(1.3); opacity: 0.7; }
+            100% { transform: scale(0.95); opacity: 1; }
+        }
+        
+        .location-link {
+            cursor: pointer;
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        .location-link:hover {
+            color: var(--info-color);
+            text-decoration: underline;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        
+        .btn-outline-primary {
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .btn-outline-primary:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        
+        .status-connected {
+            background: rgba(22, 163, 74, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(22, 163, 74, 0.2);
+        }
+        
+        .status-disconnected {
+            background: rgba(220, 38, 38, 0.1);
+            color: var(--danger-color);
+            border: 1px solid rgba(220, 38, 38, 0.2);
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .scrollable-table {
+            max-height: 500px;
+            overflow-y: auto;
+            border-radius: 12px;
+        }
+        
+        .scrollable-table::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .scrollable-table::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .scrollable-table::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        
+        .scrollable-table::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-shield-alt"></i>
+                Network Security Monitor
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <div id="connectionStatus" class="status-indicator status-disconnected">
+                    <div class="loading-spinner"></div>
+                    Connecting...
+                </div>
+                <div class="real-time-indicator">
+                    <div class="pulse-dot"></div>
+                    <span class="badge bg-danger">LIVE</span>
+                </div>
+                <span id="packetCount" class="badge bg-primary fs-6">0 packets</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <div class="dashboard-header">
+            <h1><i class="fas fa-network-wired me-2"></i>Network Traffic Dashboard</h1>
+            <p class="lead mb-0">Real-Time Monitoring & Threat Detection System</p>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card danger">
+                    <div class="icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h3 id="alertsCount">0</h3>
+                    <p>Security Alerts</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card info">
+                    <div class="icon">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <h3 id="tcpCount">0</h3>
+                    <p>TCP Packets</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card success">
+                    <div class="icon">
+                        <i class="fas fa-paper-plane"></i>
+                    </div>
+                    <h3 id="udpCount">0</h3>
+                    <p>UDP Packets</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card secondary">
+                    <div class="icon">
+                        <i class="fas fa-network-wired"></i>
+                    </div>
+                    <h3 id="otherCount">0</h3>
+                    <p>Other Protocols</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-section">
+            <h5><i class="fas fa-filter"></i>Packet Filters</h5>
+            <div class="row">
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <label for="locationFilter" class="form-label">Location</label>
+                    <select class="form-select" id="locationFilter">
+                        <option value="">All Locations</option>
+                    </select>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <label for="portFilter" class="form-label">Destination Port</label>
+                    <select class="form-select" id="portFilter">
+                        <option value="">All Ports</option>
+                    </select>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <label for="protocolFilter" class="form-label">Protocol</label>
+                    <select class="form-select" id="protocolFilter">
+                        <option value="">All Protocols</option>
+                        <option value="TCP">TCP</option>
+                        <option value="UDP">UDP</option>
+                        <option value="ICMP">ICMP</option>
+                        <option value="ARP">ARP</option>
+                        <option value="IPv6">IPv6</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <label for="alertFilter" class="form-label">Alert Status</label>
+                    <select class="form-select" id="alertFilter">
+                        <option value="">All Packets</option>
+                        <option value="alerts-only">Alerts Only</option>
+                        <option value="safe-only">Safe Only</option>
+                    </select>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-outline-primary btn-sm" onclick="clearFilters()">
+                    <i class="fas fa-times me-1"></i>Clear Filters
+                </button>
+                <button class="btn btn-outline-primary btn-sm" onclick="pauseCapture()">
+                    <i class="fas fa-pause me-1"></i><span id="pauseText">Pause</span>
+                </button>
+                <button class="btn btn-outline-primary btn-sm" onclick="exportData()">
+                    <i class="fas fa-download me-1"></i>Export CSV
+                </button>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Packet Table -->
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-table me-2"></i>Live Packet Stream
+                            <span id="filteredCount" class="badge bg-secondary ms-2">0 shown</span>
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="scrollable-table">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Source IP</th>
+                                        <th>Destination</th>
+                                        <th>Ports</th>
+                                        <th>Protocol</th>
+                                        <th>Location</th>
+                                        <th>Alert</th>
+                                        <th>Size</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="packetTableBody">
+                                    <tr>
+                                        <td colspan="8" class="empty-state">
+                                            <i class="fas fa-satellite-dish"></i>
+                                            <h6>Waiting for network traffic...</h6>
+                                            <p class="mb-0">Packets will appear here as they are captured</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Map and IP Stats -->
+            <div class="col-lg-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Traffic Map</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="map" class="map-container"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Top Source IPs</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="scrollable-table" style="max-height: 300px;">
+                            <table class="table table-sm table-striped mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>IP Address</th>
+                                        <th>Count</th>
+                                        <th>Risk</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ipCountTableBody">
+                                    <tr>
+                                        <td colspan="3" class="empty-state">
+                                            <i class="fas fa-server"></i>
+                                            <small>No data yet</small>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Global variables
+        const MAX_DISPLAYED_PACKETS = 200;
+        const socket = io();
+        const tbody = document.getElementById('packetTableBody');
+        
+        let packetCounter = 0;
+        let alertCounter = 0;
+        let tcpCounter = 0;
+        let udpCounter = 0;
+        let otherCounter = 0;
+        let isPaused = false;
+        
+        let map;
+        let markers = {};
+        let allPackets = [];
+        let filteredPackets = [];
+        let uniqueLocations = new Set();
+        let uniquePorts = new Set();
+        let ipCounts = {};
+
+        // Initialize Map
+        function initMap() {
+            map = L.map('map').setView([20, 0], 2);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 18,
+            }).addTo(map);
+        }
+
+        // Connection status management
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            if (connected) {
+                statusEl.className = 'status-indicator status-connected';
+                statusEl.innerHTML = '<i class="fas fa-check-circle me-1"></i>Connected';
+            } else {
+                statusEl.className = 'status-indicator status-disconnected';
+                statusEl.innerHTML = '<i class="fas fa-times-circle me-1"></i>Disconnected';
+            }
+        }
+
+        // Update counters
+        function updateCounters(data) {
+            if (isPaused) return;
+            
+            packetCounter++;
+            document.getElementById('packetCount').textContent = `${packetCounter.toLocaleString()} packets`;
+            
+            if (data.alert && data.alert !== 'None') {
+                alertCounter++;
+                document.getElementById('alertsCount').textContent = alertCounter.toLocaleString();
+            }
+            
+            switch (data.protocol) {
+                case 'TCP':
+                    tcpCounter++;
+                    document.getElementById('tcpCount').textContent = tcpCounter.toLocaleString();
+                    break;
+                case 'UDP':
+                    udpCounter++;
+                    document.getElementById('udpCount').textContent = udpCounter.toLocaleString();
+                    break;
+                default:
+                    otherCounter++;
+                    document.getElementById('otherCount').textContent = otherCounter.toLocaleString();
+            }
+        }
+
+        // Get protocol badge class
+        function getProtocolBadge(protocol) {
+            const badges = {
+                'TCP': 'tcp-badge',
+                'UDP': 'udp-badge'
+            };
+            return badges[protocol] || 'other-badge';
+        }
+
+        // Get alert badge HTML
+        function getAlertBadge(alert) {
+            if (!alert || alert === 'None') {
+                return '<span class="badge bg-success">Safe</span>';
+            }
+            return `<span class="badge bg-danger" title="${alert}">${alert}</span>`;
+        }
+
+        // Get row class based on alert
+        function getRowClass(alert) {
+            if (!alert || alert === 'None') return '';
+            if (alert.includes('Port') || alert.includes('Scan')) return 'warning-row';
+            return 'alert-row';
+        }
+
+        // Format file size
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        // Format ports display
+        function formatPorts(src, dst) {
+            return `${src || '-'} → ${dst || '-'}`;
+        }
+
+        // Country coordinates lookup
+        function getCountryCoordinates(country) {
+            const coords = {
+                "United States": [39.8283, -98.5795],
+                "China": [35.8617, 104.1954],
+                "Germany": [51.1657, 10.4515],
+                "United Kingdom": [55.3781, -3.4360],
+                "Japan": [36.2048, 138.2529],
+                "France": [46.6034, 1.8883],
+                "Brazil": [-14.2350, -51.9253],
+                "India": [20.5937, 78.9629],
+                "Russia": [61.5240, 105.3188],
+                "Canada": [56.1304, -106.3468],
+                "Australia": [-25.2744, 133.7751],
+                "Italy": [41.8719, 12.5674],
+                "Spain": [40.4637, -3.7492],
+                "Netherlands": [52.1326, 5.2913],
+                "South Korea": [35.9078, 127.7669]
+            };
+            return coords[country] || [Math.random() * 180 - 90, Math.random() * 360 - 180];
+        }
+
+        // Update map with new packet
+        function updateMap(data) {
+            if (!data.location || data.location === "Local Network" || data.location === "Unknown Location") {
+                return;
+            }
+            
+            const [country, city] = data.location.split(" - ");
+            if (!country) return;
+            
+            const coords = getCountryCoordinates(country);
+            const key = `${country}-${city || 'Unknown'}`;
+            
+            if (markers[key]) {
+                // Update existing marker popup
+                const marker = markers[key];
+                marker.setPopupContent(`
+                    <strong>${city || 'Unknown'}, ${country}</strong><br>
+                    Latest IP: ${data.src_ip}<br>
+                    Port: ${data.dst_port || 'Unknown'}<br>
+                    Protocol: ${data.protocol}
+                `);
+            } else {
+                // Create new marker
+                markers[key] = L.marker(coords)
+                    .addTo(map)
+                    .bindPopup(`
+                        <strong>${city || 'Unknown'}, ${country}</strong><br>
+                        IP: ${data.src_ip}<br>
+                        Port: ${data.dst_port || 'Unknown'}<br>
+                        Protocol: ${data.protocol}
+                    `);
+            }
+        }
+
+        // Check if packet matches current filters
+        function matchesCurrentFilters(packet) {
+            const locationFilter = document.getElementById('locationFilter').value;
+            const portFilter = document.getElementById('portFilter').value;
+            const protocolFilter = document.getElementById('protocolFilter').value;
+            const alertFilter = document.getElementById('alertFilter').value;
+
+            if (locationFilter && packet.location !== locationFilter) return false;
+            if (portFilter && packet.dst_port !== portFilter) return false;
+            if (protocolFilter && packet.protocol !== protocolFilter) return false;
+            
+            if (alertFilter === 'alerts-only' && (!packet.alert || packet.alert === 'None')) return false;
+            if (alertFilter === 'safe-only' && packet.alert && packet.alert !== 'None') return false;
+
+            return true;
+        }
+
+        // Filter and display packets
+        function filterPackets() {
+            filteredPackets = allPackets.filter(matchesCurrentFilters);
+            displayPackets();
+            document.getElementById('filteredCount').textContent = `${filteredPackets.length} shown`;
+        }
+
+        // Display packets in table
+        function displayPackets() {
+            tbody.innerHTML = '';
+            
+            if (filteredPackets.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <i class="fas fa-filter"></i>
+                            <h6>No packets match current filters</h6>
+                            <p class="mb-0">Try adjusting your filter criteria</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            filteredPackets.slice(0, MAX_DISPLAYED_PACKETS).forEach(packet => {
+                addPacketToTable(packet);
+            });
+        }
+
+        // Add packet to table
+        function addPacketToTable(data) {
+            const timestamp = data.timestamp ? new Date(data.timestamp) : new Date();
+            const timeStr = timestamp.toLocaleTimeString();
+            
+            const row = document.createElement('tr');
+            row.className = getRowClass(data.alert);
+            
+            row.innerHTML = `
+                <td><small>${timeStr}</small></td>
+                <td><code class="text-primary">${data.src_ip}</code></td>
+                <td><code class="text-secondary">${data.dst_ip}</code></td>
+                <td><small>${formatPorts(data.src_port, data.dst_port)}</small></td>
+                <td><span class="protocol-badge ${getProtocolBadge(data.protocol)}">${data.protocol}</span></td>
+                <td><span class="location-link" data-location="${data.location}">${data.location}</span></td>
+                <td>${getAlertBadge(data.alert)}</td>
+                <td><small>${formatSize(data.size || 0)}</small></td>
+            `;
+            
+            tbody.appendChild(row);
+            
+            // Add click event to location link
+            const locationLink = row.querySelector('.location-link');
+            if (locationLink && data.location && data.location !== "Local Network" && data.location !== "Unknown Location") {
+                locationLink.addEventListener('click', function() {
+                    focusOnLocation(data.location);
+                });
+            }
+        }
+
+        // Focus map on location
+        function focusOnLocation(location) {
+            const [country, city] = location.split(" - ");
+            const key = `${country}-${city || 'Unknown'}`;
+            const marker = markers[key];
+            
+            if (marker) {
+                map.setView(marker.getLatLng(), 6);
+                marker.openPopup();
+            }
+        }
+
+        // Update filter dropdowns
+        function updateFilters() {
+            const locationSelect = document.getElementById('locationFilter');
+            const portSelect = document.getElementById('portFilter');
+
+            // Update location filter
+            const currentLocation = locationSelect.value;
+            locationSelect.innerHTML = '<option value="">All Locations</option>';
+            
+            Array.from(uniqueLocations).sort().forEach(location => {
+                if (location && location !== "Unknown Location") {
+                    const option = document.createElement('option');
+                    option.value = location;
+                    option.textContent = location;
+                    if (location === currentLocation) option.selected = true;
+                    locationSelect.appendChild(option);
+                }
+            });
+
+            // Update port filter
+            const currentPort = portSelect.value;
+            portSelect.innerHTML = '<option value="">All Ports</option>';
+            
+            Array.from(uniquePorts).sort((a, b) => parseInt(a) - parseInt(b)).forEach(port => {
+                if (port && port !== '-') {
+                    const option = document.createElement('option');
+                    option.value = port;
+                    option.textContent = port;
+                    if (port === currentPort) option.selected = true;
+                    portSelect.appendChild(option);
+                }
+            });
+        }
+
+        // Update IP counts table
+        function updateIpCountsTable() {
+            const tableBody = document.getElementById('ipCountTableBody');
+            const sortedIps = Object.entries(ipCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 20); // Show top 20
+
+            if (sortedIps.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="empty-state">
+                            <i class="fas fa-server"></i>
+                            <small>No data yet</small>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tableBody.innerHTML = '';
+            sortedIps.forEach(([ip, count]) => {
+                const row = document.createElement('tr');
+                const riskLevel = count > 100 ? 'high' : count > 50 ? 'medium' : 'low';
+                const riskBadge = {
+                    'high': '<span class="badge bg-danger">High</span>',
+                    'medium': '<span class="badge bg-warning">Med</span>',
+                    'low': '<span class="badge bg-success">Low</span>'
+                };
+                
+                row.innerHTML = `
+                    <td><code class="text-primary">${ip}</code></td>
+                    <td><strong>${count.toLocaleString()}</strong></td>
+                    <td>${riskBadge[riskLevel]}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Control functions
+        function clearFilters() {
+            document.getElementById('locationFilter').value = '';
+            document.getElementById('portFilter').value = '';
+            document.getElementById('protocolFilter').value = '';
+            document.getElementById('alertFilter').value = '';
+            filterPackets();
+        }
+
+        function pauseCapture() {
+            isPaused = !isPaused;
+            const pauseBtn = document.querySelector('#pauseText');
+            if (isPaused) {
+                pauseBtn.innerHTML = '<i class="fas fa-play me-1"></i>Resume';
+                pauseBtn.parentElement.classList.add('btn-warning');
+                pauseBtn.parentElement.classList.remove('btn-outline-primary');
+            } else {
+                pauseBtn.innerHTML = '<i class="fas fa-pause me-1"></i>Pause';
+                pauseBtn.parentElement.classList.remove('btn-warning');
+                pauseBtn.parentElement.classList.add('btn-outline-primary');
+            }
+        }
+
+        function exportData() {
+            if (filteredPackets.length === 0) {
+                alert('No data to export. Please capture some packets first.');
+                return;
+            }
+
+            const headers = ['Timestamp', 'Source IP', 'Destination IP', 'Source Port', 'Destination Port', 'Protocol', 'Location', 'Alert', 'Size'];
+            const csvContent = [
+                headers.join(','),
+                ...filteredPackets.map(packet => [
+                    packet.timestamp || new Date().toISOString(),
+                    packet.src_ip,
+                    packet.dst_ip,
+                    packet.src_port || '',
+                    packet.dst_port || '',
+                    packet.protocol,
+                    `"${packet.location}"`,
+                    `"${packet.alert || 'None'}"`,
+                    packet.size || 0
+                ].join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `network_packets_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Socket event handlers
+        function setupSocketEvents() {
+            socket.on('connect', function() {
+                console.log('Connected to server');
+                updateConnectionStatus(true);
+            });
+
+            socket.on('disconnect', function() {
+                console.log('Disconnected from server');
+                updateConnectionStatus(false);
+            });
+
+            socket.on('packet', function(data) {
+                if (isPaused) return;
+
+                // Store packet with timestamp
+                const packetData = {
+                    ...data,
+                    timestamp: data.timestamp || new Date().toISOString()
+                };
+                
+                allPackets.unshift(packetData);
+                
+                // Limit stored packets to prevent memory issues
+                if (allPackets.length > MAX_DISPLAYED_PACKETS * 2) {
+                    allPackets = allPackets.slice(0, MAX_DISPLAYED_PACKETS);
+                }
+                
+                // Update counters
+                updateCounters(data);
+                
+                // Update unique values
+                if (data.location && data.location !== "Unknown Location") {
+                    uniqueLocations.add(data.location);
+                }
+                if (data.dst_port && data.dst_port !== '-') {
+                    uniquePorts.add(data.dst_port.toString());
+                }
+                
+                // Update IP counts
+                if (data.src_ip) {
+                    ipCounts[data.src_ip] = (ipCounts[data.src_ip] || 0) + 1;
+                }
+                
+                // Update UI
+                updateFilters();
+                updateIpCountsTable();
+                
+                // Filter and display if packet matches current filters
+                if (matchesCurrentFilters(packetData)) {
+                    filteredPackets.unshift(packetData);
+                    if (filteredPackets.length > MAX_DISPLAYED_PACKETS) {
+                        filteredPackets = filteredPackets.slice(0, MAX_DISPLAYED_PACKETS);
+                    }
+                    
+                    // Only refresh display if we have few packets or periodically
+                    if (filteredPackets.length < 50 || packetCounter % 10 === 0) {
+                        displayPackets();
+                        document.getElementById('filteredCount').textContent = `${filteredPackets.length} shown`;
+                    }
+                }
+                
+                // Update map
+                updateMap(data);
+            });
+
+            socket.on('server_stats', function(data) {
+                // Handle server statistics if needed
+                console.log('Server stats:', data);
+            });
+
+            socket.on('ip_counts', function(data) {
+                // Update IP counts from server
+                ipCounts = { ...ipCounts, ...data };
+                updateIpCountsTable();
+            });
+
+            socket.on('error', function(data) {
+                console.error('Server error:', data);
+                alert(`Server Error: ${data.message || 'Unknown error occurred'}`);
+            });
+
+            socket.on('connection_status', function(data) {
+                console.log('Connection status:', data);
+            });
+        }
+
+        // Initialize application
+        function init() {
+            initMap();
+            setupSocketEvents();
+            
+            // Set up filter event listeners
+            ['locationFilter', 'portFilter', 'protocolFilter', 'alertFilter'].forEach(id => {
+                document.getElementById(id).addEventListener('change', filterPackets);
+            });
+            
+            // Initialize connection status
+            updateConnectionStatus(false);
+            
+            console.log('Network Security Monitor initialized');
+        }
+
+        // Start application when DOM is ready
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
