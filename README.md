@@ -305,10 +305,6 @@ black *.py
 flake8 *.py
 ```
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## ⚠️ Legal Disclaimer
 
 This tool is intended for legitimate network security monitoring and educational purposes only. Users are responsible for:
@@ -317,8 +313,6 @@ This tool is intended for legitimate network security monitoring and educational
 - **Proper authorization** before monitoring network traffic
 - **Ethical use** of the software and collected data
 - **Privacy protection** and data handling practices
-
-The authors are not responsible for any misuse of this software.
 
 ## 🙏 Acknowledgments
 
@@ -329,5 +323,3 @@ The authors are not responsible for any misuse of this software.
 - **Open source community** - Various security research and threat intelligence
 
 ---
-
-**Made with ❤️ by the Network Security Community**
