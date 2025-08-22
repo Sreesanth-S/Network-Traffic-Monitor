@@ -1,6 +1,6 @@
 # Network Security Monitor
 
-A comprehensive real-time network traffic analysis and threat detection system with an intuitive web dashboard. Monitor network packets, detect suspicious activities, and visualize threats in real-time.
+A Comprehensive Real-Time Network Traffic Analysis and Threat Detection System with an intuitive Web dashboard. Monitor network packets, detect suspicious activities, and visualize threats in real-time.
 
 ## 🌟 Features
 
